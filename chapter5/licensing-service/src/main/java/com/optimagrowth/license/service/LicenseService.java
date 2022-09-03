@@ -1,56 +1,111 @@
 package com.optimagrowth.license.service;
 
-import java.util.UUID;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.TimeoutException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 
+import com.netflix.discovery.DiscoveryClient;
 import com.optimagrowth.license.config.ServiceConfig;
 import com.optimagrowth.license.model.License;
-import com.optimagrowth.license.repository.LicenseRepository;
+import com.optimagrowth.license.model.Organization;
+import com.optimagrowth.license.service.client.OrganizationDiscoveryClient;
+import com.optimagrowth.license.service.client.OrganizationFeignClient;
+import com.optimagrowth.license.service.client.OrganizationRestTemplateClient;
+import com.optimagrowth.license.utils.UserContextHolder;
+
+import io.github.resilience4j.bulkhead.annotation.Bulkhead;
+import io.github.resilience4j.bulkhead.annotation.Bulkhead.Type;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
+@Slf4j 
 public class LicenseService {
 
 	@Autowired
 	MessageSource messages;
 
-	@Autowired
-	private LicenseRepository licenseRepository;
-
+	
 	@Autowired
 	ServiceConfig config;
 
+	@Autowired
+	OrganizationDiscoveryClient discoveryClient;
+	
+	@Autowired
+	OrganizationFeignClient feignClient;
+	
+	@Autowired
+	OrganizationRestTemplateClient restTemplateClient;
+	
+	public Organization getOrganization(String organizationId, String clientString) {
+		Organization org = null;
+		switch (clientString) {
+		
+		case "feign":
+			org = feignClient.getOrganization(organizationId);
+			break;
+		case "discover":
+			org = discoveryClient.getOrganization(organizationId);
+			break;
 
-	public License getLicense(String licenseId, String organizationId){
-		License license = licenseRepository.findByOrganizationIdAndLicenseId(organizationId, licenseId);
-		if (null == license) {
-			throw new IllegalArgumentException(String.format(messages.getMessage("license.search.error.message", null, null),licenseId, organizationId));	
+		default:
+			org = restTemplateClient.getOrganization(organizationId);
+			break;
 		}
-		return license.withComment(config.getProperty());
+		return org;
+		
 	}
-
-	public License createLicense(License license){
-		license.setLicenseId(UUID.randomUUID().toString());
-		licenseRepository.save(license);
-
-		return license.withComment(config.getProperty());
-	}
-
-	public License updateLicense(License license){
-		licenseRepository.save(license);
-
-		return license.withComment(config.getProperty());
-	}
-
-	public String deleteLicense(String licenseId){
-		String responseMessage = null;
+	
+	@CircuitBreaker(name = "licenseService", fallbackMethod = "buildFallbackLicenseList")
+//	@RateLimiter(name = "licenseService", fallbackMethod = "buildFallbackLicenseList")
+//	@Retry(name = "retryLicenseService", fallbackMethod = "buildFallbackLicenseList")
+//	@Bulkhead(name = "bulkheadLicenseService", type= Type.THREADPOOL, fallbackMethod = "buildFallbackLicenseList")
+	public List<License> getLicensesByOrganization(String organizationId) throws TimeoutException {
+		log.debug("getLicensesByOrganization Correlation id: {}",
+				UserContextHolder.getContext().getCorrelationId());
+		randomlyRunLong();
+		List<License> lis = new ArrayList<>();
 		License license = new License();
-		license.setLicenseId(licenseId);
-		licenseRepository.delete(license);
-		responseMessage = String.format(messages.getMessage("license.delete.message", null, null),licenseId);
-		return responseMessage;
-
+		license.setLicenseId("1234");
+		license.setOrganizationId(organizationId);
+		license.setProductName("licence produc 1");
+		lis.add(license);
+		return lis;
 	}
+	private void randomlyRunLong() throws TimeoutException{
+		Random rand = new Random();
+		int randomNum = rand.nextInt((3 - 1) + 1) + 1;
+		if (randomNum==3) sleep();
+	}
+	private void sleep() throws TimeoutException{
+		try {
+			System.out.println("Sleep");
+			Thread.sleep(5000);
+			throw new java.util.concurrent.TimeoutException();
+		} catch (InterruptedException e) {
+			log.error(e.getMessage());
+		}
+	}
+	
+
+	@SuppressWarnings("unused")
+	private List<License> buildFallbackLicenseList(String organizationId, Throwable t){
+		List<License> fallbackList = new ArrayList<>();
+		License license = new License();
+		license.setLicenseId("0000000-00-00000");
+		license.setOrganizationId(organizationId);
+		license.setProductName("Sorry no licensing information currently available");
+		fallbackList.add(license);
+		return fallbackList;
+	}
+	
 }
