@@ -3,6 +3,8 @@ package com.optimagrowth.license.controller;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
+import javax.annotation.security.RolesAllowed;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,6 +32,7 @@ public class LicenseController {
 	@Autowired
 	ServiceConfig config;
 	
+	@RolesAllowed({ "ADMIN", "USER" }) 
 	@RequestMapping(value="/{licenseId}",method = RequestMethod.GET)
 	public ResponseEntity<License> getLicense( @PathVariable("organizationId") String organizationId,
 			@PathVariable("licenseId") String licenseId) {
@@ -37,7 +40,8 @@ public class LicenseController {
 		License license = new License();
 		return ResponseEntity.ok(license.withComment(config.getProperty()));
 	}
-
+	
+	@RolesAllowed({ "ADMIN", "USER" }) 
 	@RequestMapping(value="/{licenseId}/{clientId}",method = RequestMethod.GET)
 	public ResponseEntity<License> getLicenseOrganization( @PathVariable("organizationId") String organizationId,
 			@PathVariable("licenseId") String licenseId, @PathVariable("clientId") String clientId) {
@@ -47,6 +51,8 @@ public class LicenseController {
 		license.setProductName(org.getContactName());
 		return ResponseEntity.ok(license.withComment(config.getProperty()));
 	}
+	
+	@RolesAllowed({ "ADMIN" }) 
 	@RequestMapping(value="/",method = RequestMethod.GET)
 	public List<License> getLicenses( @PathVariable("organizationId") String organizationId) throws TimeoutException {
 		log.debug("LicenseServiceController Correlation id: {}", UserContextHolder.getContext().getCorrelationId());
