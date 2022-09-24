@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,15 +34,12 @@ public class LicenseController {
 	@RequestMapping(value="/{licenseId}",method = RequestMethod.GET)
 	public ResponseEntity<License> getLicense( @PathVariable("organizationId") String organizationId,
 			@PathVariable("licenseId") String licenseId) {
-		
-		License license = new License();
-		return ResponseEntity.ok(license.withComment(config.getProperty()));
+		return ResponseEntity.ok(licenseService.getLicense(licenseId));
 	}
 
 	@RequestMapping(value="/{licenseId}/{clientId}",method = RequestMethod.GET)
 	public ResponseEntity<License> getLicenseOrganization( @PathVariable("organizationId") String organizationId,
 			@PathVariable("licenseId") String licenseId, @PathVariable("clientId") String clientId) {
-		
 		License license = new License();
 		Organization org = licenseService.getOrganization(organizationId, clientId);
 		license.setProductName(org.getContactName());

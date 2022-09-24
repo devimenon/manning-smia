@@ -4,6 +4,7 @@ import java.util.Locale;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.cloud.client.loadbalancer.LoadBalanced;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -20,6 +21,7 @@ import org.springframework.web.servlet.i18n.SessionLocaleResolver;
 @EnableDiscoveryClient
 @EnableFeignClients
 @EnableEurekaClient
+@EnableCaching
 public class LicenseServiceApplication {
 
 	public static void main(String[] args) {
