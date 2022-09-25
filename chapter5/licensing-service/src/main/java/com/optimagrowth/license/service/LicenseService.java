@@ -7,11 +7,10 @@ import java.util.Random;
 import java.util.concurrent.TimeoutException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.MessageSource;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.PathVariable;
 
 import com.optimagrowth.license.config.ServiceConfig;
 import com.optimagrowth.license.model.License;
@@ -51,7 +50,7 @@ public class LicenseService {
 		return license.withComment(config.getProperty());
 	}
 	
-	@Cacheable(value = "organizationCache")
+	@Cacheable(value = "organizationCache")//, key="#organizationId"+"-"+"#clientId")
 	public Organization getOrganization(String organizationId, String clientId) {
 		log.info("Getting license Organization {} with client {}", organizationId, clientId);
 		Organization org = null;
@@ -113,6 +112,10 @@ public class LicenseService {
 		license.setProductName("Sorry no licensing information currently available");
 		fallbackList.add(license);
 		return fallbackList;
+	}
+	
+	@CacheEvict(value = "organizationCache")
+	public void evictSingleCacheValue(String organizationId, String clientId){
 	}
 	
 }
