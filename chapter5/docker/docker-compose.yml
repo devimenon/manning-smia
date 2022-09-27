@@ -2,6 +2,7 @@ version: '2.1'
 services:
   configdemo:
     image: ostock/configdemo:0.0.1-SNAPSHOT
+    container_name: configdemo
     ports:
        - "8071:8071"
     environment:
@@ -12,6 +13,7 @@ services:
           - "configdemo"
   eurekaserver:
     image: ostock/eurekaserver:0.0.1-SNAPSHOT
+    container_name: eurekaServer
     ports:
       - "8070:8070"
     depends_on:
@@ -23,6 +25,7 @@ services:
           - "eurekaserver"
   gatewayserver:
     image: ostock/gatewayserver:0.0.1-SNAPSHOT
+    container_name: gateway
     ports:
       - "8072:8072"
     environment:
@@ -43,6 +46,7 @@ services:
           - "gateway"
   zookeeper:
     image: wurstmeister/zookeeper:latest
+    container_name: zookeeper
     ports:
       - 2181:2181
     networks:
@@ -51,6 +55,7 @@ services:
           - "zookeeper"
   kafkaserver:
     image: wurstmeister/kafka:latest
+    container_name: kafka
     ports:
       - 9092:9092
     environment:
@@ -68,6 +73,7 @@ services:
           - "kafka"
   redisserver:
     image: redis:alpine
+    container_name: redis
     ports:
       - 6379:6379
     networks:
@@ -76,6 +82,7 @@ services:
           - "redis"
   licensingservice:
     image: ostock/licensing-service:0.0.1-SNAPSHOT
+    container_name: licensing-service
     environment:
       PROFILE: "dev"
       CONFIGDEMO_URI: "http://configdemo:8071"
@@ -92,6 +99,7 @@ services:
       - backend
   organizationservice:
     image: ostock/organization-service:0.0.1-SNAPSHOT
+    container_name: organization-service
     environment:
       PROFILE: "dev"
       CONFIGDEMO_URI: "http://configdemo:8071"
@@ -106,7 +114,69 @@ services:
       - "8081:8081"
     networks:
       - backend
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.7.0
+    container_name: elasticsearch
+    environment:
+      - node.name=elasticsearch
+      - discovery.type=single-node
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - esdata1:/usr/share/elasticsearch/data
+    ports:
+      - 9300:9300
+      - 9200:9200
+    networks:
+      backend:
+        aliases:
+          - "elasticsearch"
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.7.0
+    container_name: kibana
+    environment:
+      ELASTICSEARCH_URL: "http://elasticsearch:9300"
+    ports:
+      - 5601:5601
+    networks:
+      backend:
+        aliases:
+          - "kibana"
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.7.0
+    container_name: logstash
+    command: logstash -f /etc/logstash/conf.d/logstash.conf
+    volumes:
+      - ./config:/etc/logstash/conf.d
+    ports:
+      - "5000:5000"
+    networks:
+      backend:
+        aliases:
+          - "logstash"
+  zipkin: 
+    image: openzipkin/zipkin 
+    container_name: zipkin
+    depends_on: 
+      - elasticsearch
+    environment: 
+      - STORAGE_TYPE=elasticsearch
+      - "ES_HOSTS=elasticsearch:9300"
+    ports:
+      - "9411:9411"
+    networks:
+      backend:
+        aliases:
+          - "zipkin"
 
+volumes:
+  esdata1:
+    driver: local
 networks:
   backend:
     driver: bridge

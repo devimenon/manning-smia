@@ -1,7 +1,6 @@
 package com.optimagrowth.license.events.handler;
 
 import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.enums.EnumUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.StreamListener;
@@ -12,6 +11,7 @@ import com.optimagrowth.license.events.model.OrganizationChangeModel;
 import com.optimagrowth.license.service.LicenseService;
 import com.optimagrowth.license.utils.ActionEnum;
 
+import brave.Tracer;
 import lombok.extern.slf4j.Slf4j;
 
 @EnableBinding(CustomChannels.class)
@@ -21,7 +21,7 @@ public class OrganizationChangeHandler {
 
 	@Autowired
 	LicenseService service;
-
+	
     @StreamListener("inboundOrgChanges")
     public void loggerSink(OrganizationChangeModel organization) {
     	
